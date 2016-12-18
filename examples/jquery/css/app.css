@@ -2,3 +2,7 @@
 #footer {
 	display: none;
 }
+
+#todo-list li.dragging .view {
+	opacity: 0.3;
+}

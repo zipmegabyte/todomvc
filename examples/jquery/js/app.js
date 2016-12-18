@@ -43,6 +43,7 @@ jQuery(function ($) {
 			this.todos = util.store('todos-jquery');
 			this.todoTemplate = Handlebars.compile($('#todo-template').html());
 			this.footerTemplate = Handlebars.compile($('#footer-template').html());
+			this.$list = $('#todo-list');
 			this.bindEvents();
 
 			new Router({
@@ -56,12 +57,63 @@ jQuery(function ($) {
 			$('#new-todo').on('keyup', this.create.bind(this));
 			$('#toggle-all').on('change', this.toggleAll.bind(this));
 			$('#footer').on('click', '#clear-completed', this.destroyCompleted.bind(this));
-			$('#todo-list')
+			this.$list
 				.on('change', '.toggle', this.toggle.bind(this))
 				.on('dblclick', 'label', this.edit.bind(this))
 				.on('keyup', '.edit', this.editKeyup.bind(this))
 				.on('focusout', '.edit', this.update.bind(this))
-				.on('click', '.destroy', this.destroy.bind(this));
+				.on('click', '.destroy', this.destroy.bind(this))
+
+				// Drag and Drop support
+				.on('dragstart', 'li', this.handleDragStart.bind(this))
+				.on('dragover', 'li', this.handleDragOver.bind(this))
+				.on('drop', 'li', this.handleDrop.bind(this))
+				.on('dragend', 'li', this.handleDragEnd.bind(this));
+		},
+		toggleReorder: function() {
+			this.$list.children().prop('draggable', this.filter === 'all');
+		},
+		handleDrop: function (e) {
+
+			var sourceEl = this.sourceDragEl;
+			var targetEl = e.currentTarget;
+
+			if (sourceEl === targetEl) {
+				return;
+			}
+
+			var cursorY = e.originalEvent.pageY;
+			var targetY = $(targetEl).offset().top;
+			var targetCenter = targetEl.offsetHeight / 2;
+
+			e.preventDefault();
+
+			if (cursorY > targetY + targetCenter) {
+				$(targetEl).after(sourceEl);
+			}
+			else {
+				$(targetEl).before(sourceEl);
+			}
+
+			this.reorderList();
+		},
+		handleDragOver: function (e) {
+			e.preventDefault();
+		},
+		handleDragStart: function (e) {
+			this.sourceDragEl = e.currentTarget;
+
+			$(e.currentTarget).addClass('dragging');
+		},
+		handleDragEnd: function() {
+			$(this.sourceDragEl).removeClass('dragging');
+		},
+		reorderList: function() {
+			this.todos = $.map(this.$list.children(), function(el) {
+				return this.todos[this.indexFromEl(el)];
+			}.bind(this));
+
+			util.store('todos-jquery', this.todos);
 		},
 		render: function () {
 			var todos = this.getFilteredTodos();
@@ -71,6 +123,7 @@ jQuery(function ($) {
 			this.renderFooter();
 			$('#new-todo').focus();
 			util.store('todos-jquery', this.todos);
+			this.toggleReorder();
 		},
 		renderFooter: function () {
 			var todoCount = this.todos.length;
