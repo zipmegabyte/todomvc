@@ -6,8 +6,29 @@ jQuery(function ($) {
 		return a === b ? options.fn(this) : options.inverse(this);
 	});
 
+	Handlebars.registerHelper('negative', function (num, options) {
+		return num < 0 ? options.fn(this) : options.inverse(this);
+	});
+
+	Handlebars.registerHelper('pretty-date', function (seconds) {
+		var seconds = Math.abs(seconds);
+		var minutes = Math.ceil(seconds / 60);
+
+		if (seconds < 60) {
+			return seconds + ' ' + util.pluralize(seconds, 'second');
+		}
+
+		return minutes + ' ' + util.pluralize(minutes, 'minute');
+	});
+
 	var ENTER_KEY = 13;
 	var ESCAPE_KEY = 27;
+
+	var TICKING_SOUND_FILE = '../../media/ticking.m4a';
+	var ALARM_SOUND_FILE = '../../media/alarm.m4a';
+
+	var UPDATE_INTERVAL = 1000;
+	var TICKING_THRESHOLD = 60;
 
 	var util = {
 		uuid: function () {
@@ -43,7 +64,12 @@ jQuery(function ($) {
 			this.todos = util.store('todos-jquery');
 			this.todoTemplate = Handlebars.compile($('#todo-template').html());
 			this.footerTemplate = Handlebars.compile($('#footer-template').html());
+			this.deadlineTemplate = Handlebars.compile($('#deadline-template').html());
 			this.$list = $('#todo-list');
+
+			this.tickingSound = new Audio(TICKING_SOUND_FILE);
+			this.tickingSound.loop = true;
+
 			this.bindEvents();
 
 			new Router({
@@ -63,6 +89,9 @@ jQuery(function ($) {
 				.on('keyup', '.edit', this.editKeyup.bind(this))
 				.on('focusout', '.edit', this.update.bind(this))
 				.on('click', '.destroy', this.destroy.bind(this))
+
+				// Set deadline
+				.on('keyup', '.deadline-input', this.editDeadline.bind(this))
 
 				// Drag and Drop support
 				.on('dragstart', 'li', this.handleDragStart.bind(this))
@@ -108,6 +137,18 @@ jQuery(function ($) {
 		handleDragEnd: function() {
 			$(this.sourceDragEl).removeClass('dragging');
 		},
+		editDeadline: function(e) {
+
+			if (e.which !== ENTER_KEY) {
+				return;
+			}
+
+			var minutes = parseInt(e.target.value, 10);
+			var todo = this.todos[this.indexFromEl(e.target)];
+
+			todo.deadline = minutes ? Date.now() + minutes * 60 * 1000 : 0;
+			this.render();
+		},
 		reorderList: function() {
 			this.todos = $.map(this.$list.children(), function(el) {
 				return this.todos[this.indexFromEl(el)];
@@ -121,6 +162,7 @@ jQuery(function ($) {
 			$('#main').toggle(todos.length > 0);
 			$('#toggle-all').prop('checked', this.getActiveTodos().length === 0);
 			this.renderFooter();
+			this.renderDeadline();
 			$('#new-todo').focus();
 			util.store('todos-jquery', this.todos);
 			this.toggleReorder();
@@ -137,6 +179,44 @@ jQuery(function ($) {
 
 			$('#footer').toggle(todoCount > 0).html(template);
 		},
+		renderDeadline: function () {
+			var now = Date.now();
+			var playAlertSound = false;
+
+			$.each(this.getDeadlineTodos(), function(idx, todo) {
+
+				var secondsLeft = Math.ceil((todo.deadline - now) / 1000);
+				var templateOptions = {
+					secondsLeft: secondsLeft,
+					secondsWord: util.pluralize(secondsLeft, 'second')
+				};
+
+				if (secondsLeft < 0) {
+					templateOptions.extraClass = 'overdue';
+				}
+				else if (secondsLeft <= TICKING_THRESHOLD) {
+					playAlertSound = true;
+					templateOptions.extraClass = 'alert';
+				}
+
+				if (secondsLeft === 0) {
+					(new Audio(ALARM_SOUND_FILE)).play();
+				}
+
+				$('[data-id="' + todo.id + '"] .deadline-info').html(App.deadlineTemplate(templateOptions));
+
+			});
+
+			if (playAlertSound) {
+				this.tickingSound.play();
+			}
+			else {
+				this.tickingSound.pause();
+			}
+
+			setTimeout($.proxy(this.renderDeadline, this), UPDATE_INTERVAL);
+
+		},
 		toggleAll: function (e) {
 			var isChecked = $(e.target).prop('checked');
 
@@ -145,6 +225,11 @@ jQuery(function ($) {
 			});
 
 			this.render();
+		},
+		getDeadlineTodos: function() {
+			return this.todos.filter(function (todo) {
+				return todo.deadline && !todo.completed;
+			});
 		},
 		getActiveTodos: function () {
 			return this.todos.filter(function (todo) {

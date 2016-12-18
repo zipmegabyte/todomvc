@@ -31,8 +31,16 @@
 				<div class="view">
 					<input class="toggle" type="checkbox" {{#if completed}}checked{{/if}}>
 					<label>{{title}}</label>
+					{{#unless completed}}
+						<div class="deadline-setup">
+							<input type="number" placeholder="minutes" class="deadline-input">
+						</div>
+					{{/unless}}
 					<button class="destroy"></button>
 				</div>
+				{{#unless completed}}
+					<div class="deadline-info"></div>
+				{{/unless}}
 				<input class="edit" value="{{title}}">
 			</li>
 		{{/this}}
@@ -51,6 +59,17 @@
 				</li>
 			</ul>
 			{{#if completedTodos}}<button id="clear-completed">Clear completed</button>{{/if}}
+		</script>
+		<script id="deadline-template" type="text/x-handlebars-template">
+			{{#this}}
+				<div class="{{extraClass}}">
+				{{#negative secondsLeft}}
+					Overdue by {{pretty-date secondsLeft}}.
+				{{else}}
+					Due in {{pretty-date secondsLeft}}.
+				{{/negative}}
+				</div>
+			{{/this}}
 		</script>
 		<script src="node_modules/todomvc-common/base.js"></script>
 		<script src="node_modules/jquery/dist/jquery.js"></script>

@@ -1,3 +1,9 @@
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 #main,
 #footer {
 	display: none;
@@ -5,4 +11,76 @@
 
 #todo-list li.dragging .view {
 	opacity: 0.3;
+}
+
+#todo-list li .view {
+	position: relative;
+}
+
+#todo-list .deadline-info div {
+	font-size: 13px;
+	font-weight: normal;
+	padding: 0 10px;
+	background-color: #449df9;
+	color: #fff;
+}
+
+#todo-list .deadline-info div:before {
+	content: '\1F551';
+	margin-right: 5px;
+}
+
+#todo-list .deadline-info div.overdue {
+	background-color: #626266;
+}
+
+#todo-list .deadline-info div.alert {
+	background-color: #C21A01;
+}
+
+#todo-list .deadline-setup {
+	display: none;
+	position: absolute;
+	right: 30px;
+	top: 0;
+	bottom: 0;
+	line-height: 55px;
+	opacity: 0.3;
+	transition: opacity 0.2s ease-out;
+	font-size: 19px;
+}
+
+#todo-list .deadline-setup button {
+	width: 30px;
+}
+
+#todo-list .deadline-setup:hover {
+	opacity: 0.8;
+}
+
+#todo-list li:hover .deadline-setup {
+	display: block;
+}
+
+#todo-list .deadline-setup:before {
+	content: '\1F551';
+	line-height: 42px;
+	margin-right: 5px;
+}
+
+#todo-list .deadline-setup input {
+	width: 75px;
+	margin-right: 3px;
+	font-size: 19px;
+}
+
+#todo-list li .destroy {
+	margin: 0;
+	height: auto;
+	width: 30px;
+	right: 0;
+}
+#todo-list li .destroy:after {
+	display: block;
+	height: 42px;
 }
